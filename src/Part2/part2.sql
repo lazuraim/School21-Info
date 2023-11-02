@@ -2,7 +2,7 @@ create or replace procedure AddP2P(
     Checked varchar,
     Checker varchar,
     TaskName varchar,
-    State TaskStatus,
+    Status TaskStatus,
     TimeCurrent time
 )
 as $$
@@ -27,7 +27,7 @@ as $$
     
     -- currentTime := '00:00:00'::time + TimeCurrent;
     INSERT INTO P2P (CheckID, CheckingPeer, Status, Time)
-    VALUES (lastCheckID, Checker, State, TimeCurrent);
+    VALUES (lastCheckID, Checker, Status, TimeCurrent);
 end;
 $$ language plpgsql;
 
@@ -43,8 +43,6 @@ as $$
             UPDATE TransferredPoints trp
             SET PointsAmount = PointsAmount + 1
             WHERE new.CheckingPeer = trp.checkingpeer
-                AND Checks.id = lastCheckID
-                AND Checks.Peer = trp.CheckedPeer;
         end if;
         return new;
     end;
@@ -56,7 +54,7 @@ for each row execute procedure CheckP2P();
 create or replace procedure AddVerter(
     Checked varchar,
     TaskName varchar,
-    State TaskStatus,
+    Status TaskStatus,
     TimeCurrent time
 )
 as $$
@@ -66,14 +64,14 @@ as $$
     begin
         lastCheckID := (SELECT c.id FROM P2P
             JOIN Checks c ON c.id = P2P.CheckID
-            WHERE Checks.Task = TaskName
-                AND Checks.Peer = Checked
+            WHERE c.Task = TaskName
+                AND c.Peer = Checked
                 AND P2P.Status = 'Success'
                 ORDER BY P2P.Time desc
                 limit 1);
         -- currentTime := '00:00:00'::time + TimeCurrent;
         INSERT INTO Verter(CheckID, Status, Time)
-        VALUES (lastCheckID, State, TimeCurrent);
+        VALUES (lastCheckID, Status, TimeCurrent);
     end;
 $$ language plpgsql;
 
