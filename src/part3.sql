@@ -6,17 +6,22 @@
         -- number of transferred peer points.
 -- The number is negative if peer 2 received more points from peer 1.
 
-CREATE OR REPLACE FUNCTION points_amout()
+CREATE OR REPLACE FUNCTION points_amount()
 	RETURNS TABLE (
 	"Peer1" VARCHAR(255),
-	"Peer2" VARCHAR(255),
+	"Peer2" text,
 	"PointsAmout" INT
 )
 AS $$
 BEGIN
 	RETURN QUERY
-	-- SELECT checkingpeer, checkedpeer, pointsamount
-	-- FROM transferredpoints;
+	SELECT tp1.checkingpeer,
+		   tp1.checkedpeer, 
+		   -1 * (tp1.pointsamount - tp2.pointsamount)
+	FROM transferredpoints AS tp1
+	JOIN transferredpoints AS tp2 ON tp1.checkingpeer = tp2.checkedpeer 
+								 AND tp1.checkedpeer = tp2.checkingpeer 
+								 AND tp1.id < tp2.id;
 END; $$
 LANGUAGE plpgsql;
 
@@ -39,7 +44,9 @@ CREATE OR REPLACE FUNCTION peer_task_xp()
 AS $$
 BEGIN
 	RETURN QUERY
-	SELECT peer, task, xp.xpamount
+	SELECT peer, 
+           task, 
+           xp.xpamount
 	FROM checks
 	JOIN xp ON checks.id = xp.checkid
 	JOIN p2p ON checks.id = p2p.checkid
@@ -65,8 +72,12 @@ BEGIN
 	RETURN QUERY
 	SELECT tt1.peer
 	FROM timetracking AS tt1
-	JOIN timetracking AS tt2 ON tt1.peer = tt2.peer AND tt1.date = tt2.date
-	WHERE tt1.date = day AND tt1.status = 1 AND tt2.status = 2 AND (tt2.time - tt1.time) > interval '10 hours';
+	JOIN timetracking AS tt2 ON tt1.peer = tt2.peer 
+                             AND tt1.date = tt2.date
+	WHERE tt1.date = day 
+          AND tt1.status = 1 
+          AND tt2.status = 2 
+          AND (tt2.time - tt1.time) > interval '10 hours';
 END; $$
 LANGUAGE plpgsql;
 
