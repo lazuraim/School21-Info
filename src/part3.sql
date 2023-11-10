@@ -10,18 +10,18 @@ CREATE OR REPLACE FUNCTION points_amount()
 	RETURNS TABLE (
 	"Peer1" VARCHAR(255),
 	"Peer2" text,
-	"PointsAmout" INT
+	"PointsAmount" INT
 )
 AS $$
 BEGIN
 	RETURN QUERY
-	SELECT tp1.checkingpeer,
-		   tp1.checkedpeer, 
-		   -1 * (tp1.pointsamount - tp2.pointsamount)
+	SELECT tp1.checkingpeer AS Peer1,
+		   tp1.checkedpeer AS Peer2, 
+		   -1 * (tp2.pointsamount - tp1.pointsamount) AS PointsAmount
 	FROM transferredpoints AS tp1
 	JOIN transferredpoints AS tp2 ON tp1.checkingpeer = tp2.checkedpeer 
-								 AND tp1.checkedpeer = tp2.checkingpeer 
-								 AND tp1.id < tp2.id;
+								 AND tp1.checkedpeer = tp2.checkingpeer
+	WHERE -1 * (tp2.pointsamount - tp1.pointsamount) != 0;
 END; $$
 LANGUAGE plpgsql;
 
@@ -115,4 +115,29 @@ LANGUAGE plpgsql;
 
 SELECT * FROM change_in_points();
 
+-------------------------------- 5 ---------------------------------
+
+-- Calculate the change in the number of peer points of each peer using the table returned by the first function from Part 3
+-- Output the result sorted by the change in the number of points.
+-- Output format: 
+			-- peer's nickname, 
+			-- change in the number of peer points
+
+CREATE OR REPLACE FUNCTION change_in_points_2()
+	RETURNS TABLE (
+	"Peer" VARCHAR(255),
+	"PointsChange" BIGINT
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT points."Peer1", 
+		   SUM(points."PointsAmount") AS PointsChange
+	FROM points_amount() AS points
+	GROUP BY 1
+	ORDER BY 2 DESC;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM change_in_points_2();
 
