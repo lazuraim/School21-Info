@@ -56,22 +56,18 @@ SELECT * FROM peer_task_xp();
 -- Function parameters: day, for example 12.05.2022.
 -- The function returns only a list of peers.
 
-CREATE OR REPLACE FUNCTION hardworking_peers()
+CREATE OR REPLACE FUNCTION hardworking_peers(day DATE)
 	RETURNS TABLE (
-	"Peer1" VARCHAR(255),
-	"Task" VARCHAR(255),
-	"XP" INT
-)
+	"Peer" VARCHAR(255)
+	)
 AS $$
 BEGIN
 	RETURN QUERY
-	SELECT peer, task, xp.xpamount
-	FROM checks
-	JOIN xp ON checks.id = xp.checkid
-	JOIN p2p ON checks.id = p2p.checkid
-	WHERE p2p.status = 'Success'
-	ORDER BY peer;
+	SELECT tt1.peer
+	FROM timetracking AS tt1
+	JOIN timetracking AS tt2 ON tt1.peer = tt2.peer AND tt1.date = tt2.date
+	WHERE tt1.date = day AND tt1.status = 1 AND tt2.status = 2 AND (tt2.time - tt1.time) > interval '10 hours';
 END; $$
 LANGUAGE plpgsql;
 
-SELECT * FROM hardworking_peers();
+SELECT * FROM hardworking_peers('2022-08-08');
