@@ -141,3 +141,37 @@ LANGUAGE plpgsql;
 
 SELECT * FROM change_in_points_2();
 
+-------------------------------- 6 ---------------------------------
+-- Find the most frequently checked task for each day
+-- If there is the same number of checks for some tasks in a certain day, output all of them.
+-- Output format: 
+        -- day, 
+        -- task name
+
+CREATE OR REPLACE FUNCTION most_frequently_checked_task()
+	RETURNS TABLE (
+	"Day" DATE,
+	"TaskName" VARCHAR(255)
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	WITH tasks AS (
+	SELECT task, 
+		   date, 
+		   COUNT(task) AS number_of_tasks
+		FROM checks
+		GROUP BY 1, 2
+	)
+	SELECT date, task
+	FROM tasks
+	WHERE number_of_tasks = (
+		SELECT MAX(number_of_tasks)
+		FROM tasks AS tasks2
+		WHERE tasks.date = tasks2.date
+	)
+	ORDER BY 1;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM most_frequently_checked_task();
