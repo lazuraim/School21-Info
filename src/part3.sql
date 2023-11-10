@@ -82,3 +82,37 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM hardworking_peers('2022-08-08');
+
+
+-------------------------------- 4 ---------------------------------
+-- Calculate the change in the number of peer points of each peer using the TransferredPoints table
+-- Output the result sorted by the change in the number of points.
+-- Output format: 
+--     peer's nickname, 
+--     change in the number of peer points
+
+CREATE OR REPLACE FUNCTION change_in_points()
+	RETURNS TABLE (
+	"Peer" VARCHAR(255),
+	"PointsChange" BIGINT
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT DISTINCT peer_name, SUM(points_change)
+	FROM 
+		(SELECT tp.checkingpeer as peer_name, 
+		tp.pointsamount - tp2.pointsamount as points_change
+		FROM transferredpoints AS tp
+			JOIN transferredpoints AS tp2 ON tp.checkingpeer = tp2.checkedpeer 
+									  AND tp.checkedpeer = tp2.checkingpeer
+		) AS points
+	WHERE points_change != 0
+	GROUP BY 1
+	ORDER BY 2 DESC;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM change_in_points();
+
+
