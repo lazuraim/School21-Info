@@ -16,7 +16,7 @@ as $$
             SELECT LASTVAL() INTO lastCheckID;
         else
             SELECT Checks.id INTO lastCheckID
-            FROM P2P
+            FROM P2Pq
             JOIN Checks ON Checks.id = P2P.CheckID
             WHERE Checks.peer = Checked
                 AND Checks.Task = TaskName
