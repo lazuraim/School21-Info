@@ -208,3 +208,59 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM completed_block('SQL');
+
+
+-------------------------------- 8 ---------------------------------
+
+-- Determine which peer each student should go to for a check.
+-- You should determine it according to the recommendations of the peer's friends, 
+-- i.e. you need to find the peer with the greatest number of friends who recommend to be checked by him.
+-- Output format: 
+		-- peer's nickname, 
+		-- nickname of the checker found
+
+-- CREATE OR REPLACE FUNCTION recommended_checker()
+-- 	RETURNS TABLE (
+-- 	"Peer" VARCHAR(255),
+-- 	"RecommendedPeer" VARCHAR(255)
+-- 	)
+-- AS $$
+-- BEGIN
+-- 	RETURN QUERY
+-- 	SELECT 
+-- END; $$
+-- LANGUAGE plpgsql;
+
+-- SELECT * FROM recommended_checker();
+
+
+
+
+-------------------------------- 14 ---------------------------------
+
+-- Find the peer with the highest amount of XP
+-- Output format: 
+		  -- peer's nickname, 
+		  -- amount of XP
+
+CREATE OR REPLACE FUNCTION max_xp()
+	RETURNS TABLE (
+	"Peer" VARCHAR(255),
+	"XP" BIGINT
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT peer, SUM(xpamount)
+	FROM (
+		SELECT peer, xpamount
+		FROM checks
+		JOIN xp ON checks.id = xp.checkid
+	) AS all_peers
+	GROUP BY peer
+	ORDER BY 2 DESC
+	LIMIT 1;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM max_xp();
