@@ -132,7 +132,7 @@ AS $$
 BEGIN
 	RETURN QUERY
 	SELECT points."Peer1", 
-		   SUM(points."PointsAmount") AS PointsChange
+		SUM(points."PointsAmount") AS PointsChange
 	FROM points_amount() AS points
 	GROUP BY 1
 	ORDER BY 2 DESC;
@@ -158,8 +158,8 @@ BEGIN
 	RETURN QUERY
 	WITH tasks AS (
 	SELECT task, 
-		   date, 
-		   COUNT(task) AS number_of_tasks
+		date, 
+		COUNT(task) AS number_of_tasks
 		FROM checks
 		GROUP BY 1, 2
 	)
@@ -175,3 +175,36 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM most_frequently_checked_task();
+
+
+-------------------------------- 7 ---------------------------------
+
+-- Find all peers who have completed the whole given block of tasks and the completion date of the last task
+-- Procedure parameters: 
+	-- name of the block, for example “CPP”.
+-- The result is sorted by the date of completion.
+-- Output format: 
+	-- peer's name, 
+	-- date of completion of the block (i.e. the last completed task from that block)
+
+CREATE OR REPLACE FUNCTION completed_block(block TEXT)
+	RETURNS TABLE (
+	"Peer" VARCHAR(255),
+	"Day" DATE
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT peer, date
+	FROM checks
+	JOIN p2p ON checks.id = p2p.checkid
+	WHERE p2p.status = 'Success' AND task = (
+		SELECT MAX(title)
+		FROM tasks
+		WHERE title SIMILAR TO (block || '[0-9]')
+	)
+	ORDER BY date;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM completed_block('SQL');
