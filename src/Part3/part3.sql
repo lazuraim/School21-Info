@@ -298,3 +298,34 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM max_xp();
+
+-------------------------------- 15 ---------------------------------
+
+-- Determine the peers that came before the given time 
+-- at least N times during the whole time
+-- Procedure parameters: 
+			-- time, 
+			-- N number of times .
+-- Output format: 
+			-- list of peers
+
+CREATE OR REPLACE FUNCTION came_before(day DATE, N INT)
+	RETURNS TABLE (
+	"Peer" VARCHAR(255)
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT peer
+	FROM (
+		SELECT peer, COUNT(*) AS times
+		FROM timetracking
+		WHERE date < day AND status = 1
+		GROUP BY peer
+	) AS all_visits
+	WHERE times >= N;
+
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM came_before('2022-09-09', 2);
