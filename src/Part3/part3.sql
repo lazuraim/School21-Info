@@ -219,19 +219,39 @@ SELECT * FROM completed_block('SQL');
 		-- peer's nickname, 
 		-- nickname of the checker found
 
--- CREATE OR REPLACE FUNCTION recommended_checker()
--- 	RETURNS TABLE (
--- 	"Peer" VARCHAR(255),
--- 	"RecommendedPeer" VARCHAR(255)
--- 	)
--- AS $$
--- BEGIN
--- 	RETURN QUERY
--- 	SELECT 
--- END; $$
--- LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION recommended_checker()
+	RETURNS TABLE (
+	"Peer" VARCHAR(255),
+	"RecommendedPeer" VARCHAR(255)
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	WITH all_recommendations AS (
+		SELECT ffp.nickname, ffp.peer2, recommendedpeer
+			FROM recommendations AS rec
+			JOIN 
+			(SELECT nickname, friends.peer2
+			FROM peers
+			JOIN friends ON peer1 = nickname
+			) AS ffp ON ffp.peer2 = rec.peer
+	),
+	peer_mentions AS (
+		SELECT nickname, recommendedpeer, COUNT(recommendedpeer) AS mentions
+		FROM all_recommendations
+		GROUP BY recommendedpeer, nickname
+	)
+	SELECT DISTINCT nickname, recommendedpeer
+	FROM peer_mentions AS pm
+	WHERE pm.mentions = (
+		SELECT MAX(mentions)
+		FROM peer_mentions AS pm2
+		WHERE pm.nickname = pm2.nickname
+	) AND nickname != recommendedpeer;
+END; $$
+LANGUAGE plpgsql;
 
--- SELECT * FROM recommended_checker();
+SELECT * FROM recommended_checker();
 
 -------------------------------- 9 ---------------------------------
 
