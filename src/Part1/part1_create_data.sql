@@ -227,7 +227,13 @@ begin
     INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Zoomdeni', '08.08.22', '16:45', 2);
     INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Tonitaga', '08.08.22', '19:36', 2);
     INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Marcelit', '08.08.22', '23:51', 2);
-
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Grandpat', '11.11.23', '11:00', 1);
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Grandpat', '11.11.23', '21:00', 2);
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Grandpat', '11.12.23', '10:00', 1);
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Grandpat', '11.12.23', '23:00', 2);
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Marcelit', '11.9.23', '12:00', 1);
+    INSERT INTO TimeTracking(Peer, Date, Time, Status) VALUES ('Marcelit', '11.9.23', '20:00', 2);
+  
     -- Recommendations
     INSERT INTO Recommendations(Peer, RecommendedPeer) VALUES ('Marcelit', 'Tonitaga');
     INSERT INTO Recommendations(Peer, RecommendedPeer) VALUES ('Marcelit', 'Zoomdeni');

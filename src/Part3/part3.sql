@@ -329,3 +329,33 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM came_before('2022-09-09', 2);
+
+-------------------------------- 16 ---------------------------------
+
+-- Determine the peers who left the campus more than M times during the last N days
+-- Procedure parameters: 
+			-- N number of days, 
+			-- M number of times .
+-- Output format: 
+			-- list of peers
+
+CREATE OR REPLACE FUNCTION left_campus(num_of_days INT, M_times INT)
+	RETURNS TABLE (
+	"Peer" VARCHAR(255)
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT peer
+	FROM (
+		SELECT peer, COUNT(*) AS times
+		FROM timetracking
+		WHERE date > (CURRENT_DATE - num_of_days) AND date < CURRENT_DATE AND status = 2
+		GROUP BY peer
+	) AS all_visits
+	WHERE times >= M_times;
+
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM left_campus(10, 1);
