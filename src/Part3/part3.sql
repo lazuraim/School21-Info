@@ -332,21 +332,15 @@ CREATE OR REPLACE FUNCTION check_on_birthday()
 	)
 AS $$
 DECLARE
-total NUMERIC := 0.5 * (SELECT COUNT(*) FROM (
-	SELECT peer, date, p2p.status
-	FROM checks
-	JOIN peers ON nickname = peer
-	JOIN p2p ON checks.id = p2p.checkid
-	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
-	) AS all_birthdays
-);
+total NUMERIC := (SELECT COUNT(*) FROM peers);
 successful NUMERIC := (SELECT COUNT(*) FROM (
-	SELECT peer, date, p2p.status
+	SELECT peer, date
 	FROM checks
 	JOIN peers ON nickname = peer
 	JOIN p2p ON checks.id = p2p.checkid
+	JOIN verter ON checks.id = verter.checkid
 	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
-	AND status = 'Success'
+	AND p2p.status = 'Success' AND verter.status = 'Success'
 	) AS success_on_birthday
 );
 failure NUMERIC := (SELECT COUNT(*) FROM (
@@ -367,6 +361,9 @@ LANGUAGE plpgsql;
 
 SELECT * FROM check_on_birthday();
 
+
+INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Start', '14:25');
+INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Success', '14:28');
 
 -------------------------------- 11 ---------------------------------
 
@@ -400,6 +397,40 @@ LANGUAGE plpgsql;
 SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
 
 
+
+-------------------------------- 12 ---------------------------------
+
+-- Using recursive common table expression, output the number of preceding tasks for each task
+-- I. e. How many tasks have to be done, based on entry conditions, to get access to the current one.
+-- Output format: 
+		-- task name, 
+		-- number of preceding tasks
+
+
+-- CREATE OR REPLACE FUNCTION preceding_tasks()
+-- 	RETURNS TABLE (
+-- 	"Task" VARCHAR(255),
+-- 	"PrevCount" INT
+-- 	)
+-- AS $$
+-- BEGIN
+-- 	WITH RECURSIVE r AS (
+-- 		SELECT 1 AS i,
+-- 			   1 AS PrevCount,
+-- 			   task
+-- 		UNION
+
+-- 		SELECT i + 1 AS i,
+-- 			   PrevCount + 1 AS PrevCount
+-- 		FROM r
+-- 		JOIN tasks
+
+-- 	)
+-- 	SELECT * FROM r;
+-- END; $$
+-- LANGUAGE plpgsql;
+
+-- SELECT * FROM preceding_tasks();
 
 
 -------------------------------- 13 ---------------------------------
@@ -533,3 +564,20 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM left_campus(10, 1);
+
+
+-------------------------------- 17 ---------------------------------
+
+-- Determine for each month the percentage of early entries
+-- For each month, count how many times people born in that month 
+-- came to campus during the whole time (we'll call this the total number of entries).
+
+-- For each month, count the number of times people born in that month 
+-- have come to campus before 12:00 in all time (we'll call this the number of early entries).
+
+-- For each month, count the percentage of early entries to campus relative to the total number of entries.
+-- Output format: 
+		-- month, 
+		-- percentage of early entries
+
+
