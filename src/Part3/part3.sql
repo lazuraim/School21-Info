@@ -344,12 +344,13 @@ successful NUMERIC := (SELECT COUNT(*) FROM (
 	) AS success_on_birthday
 );
 failure NUMERIC := (SELECT COUNT(*) FROM (
-	SELECT peer, date, p2p.status
+	SELECT peer, date
 	FROM checks
 	JOIN peers ON nickname = peer
 	JOIN p2p ON checks.id = p2p.checkid
+	JOIN verter ON checks.id = verter.checkid
 	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
-	AND status = 'Failure'
+	AND (p2p.status = 'Failure' OR verter.status = 'Failure')
 	) AS failure_on_birthday
 );
 BEGIN
@@ -362,8 +363,8 @@ LANGUAGE plpgsql;
 SELECT * FROM check_on_birthday();
 
 
-INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Start', '14:25');
-INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Success', '14:28');
+-- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Start', '14:25');
+-- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Success', '14:28');
 
 -------------------------------- 11 ---------------------------------
 
