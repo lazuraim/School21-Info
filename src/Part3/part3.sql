@@ -236,6 +236,40 @@ SELECT * FROM completed_block('SQL');
 
 
 
+
+-------------------------------- 11 ---------------------------------
+
+-- Determine all peers who did the given tasks 1 and 2, but did not do task 3
+-- Procedure parameters: 
+			-- names of tasks 1, 2 and 3.
+-- Output format: 
+			-- list of peers
+
+CREATE OR REPLACE FUNCTION two_yes_third_not(one TEXT, two TEXT, three TEXT)
+	RETURNS TABLE (
+	"Peer" VARCHAR(255)
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT peer
+	FROM checks
+	WHERE task = one
+	UNION
+	SELECT peer
+	FROM checks
+	WHERE task = two
+	EXCEPT
+	SELECT peer
+	FROM checks
+	WHERE task = three;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
+
+
+
 -------------------------------- 14 ---------------------------------
 
 -- Find the peer with the highest amount of XP
