@@ -316,6 +316,58 @@ LANGUAGE plpgsql;
 
 SELECT * FROM percentage_two_blocks('SQL', 'A');
 
+-------------------------------- 10 ---------------------------------
+
+-- Determine the percentage of peers who have ever successfully passed a check on their birthday
+-- Also determine the percentage of peers who have ever failed a check on their birthday.
+-- Output format: 
+		-- percentage of peers who have ever successfully passed a check on their birthday, 
+		-- percentage of peers who have ever failed a check on their birthday
+
+
+CREATE OR REPLACE FUNCTION check_on_birthday()
+	RETURNS TABLE (
+	"SuccessfulChecks" NUMERIC,
+	"UnsuccessfulChecks" NUMERIC
+	)
+AS $$
+DECLARE
+total NUMERIC := 0.5 * (SELECT COUNT(*) FROM (
+	SELECT peer, date, p2p.status
+	FROM checks
+	JOIN peers ON nickname = peer
+	JOIN p2p ON checks.id = p2p.checkid
+	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
+	) AS all_birthdays
+);
+successful NUMERIC := (SELECT COUNT(*) FROM (
+	SELECT peer, date, p2p.status
+	FROM checks
+	JOIN peers ON nickname = peer
+	JOIN p2p ON checks.id = p2p.checkid
+	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
+	AND status = 'Success'
+	) AS success_on_birthday
+);
+failure NUMERIC := (SELECT COUNT(*) FROM (
+	SELECT peer, date, p2p.status
+	FROM checks
+	JOIN peers ON nickname = peer
+	JOIN p2p ON checks.id = p2p.checkid
+	WHERE to_char(checks.date, 'MM-DD') = to_char(peers.birthday, 'MM-DD')
+	AND status = 'Failure'
+	) AS failure_on_birthday
+);
+BEGIN
+	RETURN QUERY
+	SELECT ROUND(successful / total * 100),
+		   ROUND(failure / total * 100);
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM check_on_birthday();
+
+
 -------------------------------- 11 ---------------------------------
 
 -- Determine all peers who did the given tasks 1 and 2, but did not do task 3
@@ -346,9 +398,6 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
-
-
-
 
 
 

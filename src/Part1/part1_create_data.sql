@@ -103,9 +103,10 @@ begin
     INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-20');
     INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-24');
     INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-26');
-    INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-26');
-    INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-31');
-    -- 55
+    INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-26'); 
+    INSERT INTO Checks(Peer, Task, Date) VALUES ('Zoomdeni', 'A1', '2023-12-31');  -- 55
+    INSERT INTO Checks(Peer, Task, Date) VALUES ('Grandpat', 'C3', '2023-04-01');
+
 
     -- XP
     INSERT INTO XP(CheckID, XPAmount) VALUES (2, 1023);
@@ -445,6 +446,9 @@ begin
 
     INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) VALUES (55, 'Marcelit', 'Start', '22:30');
     INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) VALUES (55, 'Marcelit', 'Failure', '23:58');
+
+    INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) VALUES (56, 'Zoomdeni', 'Start', '14:02');
+    INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) VALUES (56, 'Zoomdeni', 'Success', '14:30');
 
 end;
 $$ language plpgsql;
