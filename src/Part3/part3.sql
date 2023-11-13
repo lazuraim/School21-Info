@@ -233,9 +233,68 @@ SELECT * FROM completed_block('SQL');
 
 -- SELECT * FROM recommended_checker();
 
+-------------------------------- 9 ---------------------------------
 
+-- Determine the percentage of peers who:
+		-- Started only block 1
+		-- Started only block 2
+		-- Started both
+		-- Have not started any of them
+-- A peer is considered to have started a block if he has at least one check of any task 
+-- from this block (according to the Checks table)
 
+-- Procedure parameters: 
+		-- name of block 1, for example SQL, 
+		-- name of block 2, for example A.
+-- Output format: 
+		-- percentage of those who started only the first block, 
+		-- percentage of those who started only the second block, 
+		-- percentage of those who started both blocks, 
+		-- percentage of those who did not started any of them
 
+CREATE OR REPLACE FUNCTION percentage_two_blocks(block1 TEXT, block2 TEXT)
+	RETURNS TABLE (
+	"StartedBlock1" NUMERIC,
+	"StartedBlock2" NUMERIC,
+	"StartedBothBlocks" NUMERIC,
+	"DidntStartAnyBlock" NUMERIC
+	)
+AS $$
+DECLARE 
+	total NUMERIC := (SELECT COUNT(*) FROM peers);
+	started_block1 NUMERIC := (SELECT COUNT(*) FROM (
+		SELECT DISTINCT peer
+		FROM checks
+		WHERE task SIMILAR TO (block1 || '1')
+	) AS bl1
+	);
+	started_block2 NUMERIC := (SELECT COUNT(*) FROM (
+		SELECT DISTINCT peer
+		FROM checks
+		WHERE task SIMILAR TO (block2 || '1')
+	) AS bl2
+	);
+	started_both NUMERIC := (SELECT COUNT(*) FROM (
+		SELECT DISTINCT peer
+		FROM checks
+		WHERE task SIMILAR TO (block1 || '1')
+		INTERSECT
+		SELECT DISTINCT peer
+		FROM checks
+		WHERE task SIMILAR TO (block2 || '1')
+	) AS bth
+	);
+	not_started NUMERIC := total - (started_block1 + started_block2 - started_both);
+BEGIN
+    RETURN QUERY 
+	SELECT ROUND(started_block1 / total * 100),
+		   ROUND(started_block2 / total * 100),
+		   ROUND(started_both / total * 100),
+		   ROUND(not_started / total * 100);
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM percentage_two_blocks('SQL', 'A');
 
 -------------------------------- 11 ---------------------------------
 
@@ -267,6 +326,52 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
+
+
+
+
+
+
+
+-------------------------------- 13 ---------------------------------
+
+-- Find "lucky" days for checks. A day is considered "lucky" if it has at least N consecutive successful checks
+-- Parameters of the procedure: 
+		  -- the N number of consecutive successful checks .
+-- The time of the check is the start time of the P2P step.
+-- Successful consecutive checks are the checks with no unsuccessful checks in between.
+-- The amount of XP for each of these checks must be at least 80% of the maximum.
+-- Output format: 
+		  -- list of days
+
+
+-- CREATE OR REPLACE FUNCTION lucky_days(num INT)
+-- 	RETURNS TABLE (
+-- 	"Day" DATE,
+-- 	)
+-- AS $$
+-- BEGIN
+-- 	RETURN QUERY
+	
+-- END; $$
+-- LANGUAGE plpgsql;
+
+-- SELECT * FROM lucky_days(3);
+						 
+-- SELECT checkingpeer, status, time, checks.date
+-- FROM p2p
+-- JOIN checks ON checks.id = p2p.checkid
+-- ORDER BY date, time, checkingpeer
+						 
+
+
+-- INSERT INTO Checks(Peer, Task, Date) 
+-- VALUES ('Zoomdeni', 'A2', '2023-08-01');	 
+						 
+-- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
+-- VALUES (56, 'Zoomdeni', 'Start', '14:00');
+-- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
+-- VALUES (56, 'Zoomdeni', 'Success', '14:30');
 
 
 
