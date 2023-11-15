@@ -397,8 +397,6 @@ LANGUAGE plpgsql;
 
 SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
 
-
-
 -------------------------------- 12 ---------------------------------
 
 -- Using recursive common table expression, output the number of preceding tasks for each task
@@ -408,31 +406,44 @@ SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
 		-- number of preceding tasks
 
 
--- CREATE OR REPLACE FUNCTION preceding_tasks()
--- 	RETURNS TABLE (
--- 	"Task" VARCHAR(255),
--- 	"PrevCount" INT
--- 	)
--- AS $$
--- BEGIN
--- 	WITH RECURSIVE r AS (
--- 		SELECT 1 AS i,
--- 			   1 AS PrevCount,
--- 			   task
--- 		UNION
+CREATE OR REPLACE FUNCTION count_preceding_tasks(current_task TEXT, OUT counter INT)
+	RETURNS INTEGER
+AS $$
+BEGIN
+	WITH RECURSIVE r AS (
+		SELECT title,
+			   0 AS iteration
+		FROM tasks
+		WHERE title = current_task
+		
+		UNION ALL
 
--- 		SELECT i + 1 AS i,
--- 			   PrevCount + 1 AS PrevCount
--- 		FROM r
--- 		JOIN tasks
+		SELECT t.parenttask,
+			   r.iteration + 1
+		FROM tasks t
+		JOIN r ON t.title = r.title
+	)
+	SELECT INTO counter MAX(iteration) - 1
+	FROM r
+	WHERE title IS NULL;
+END; $$
+LANGUAGE plpgsql;
 
--- 	)
--- 	SELECT * FROM r;
--- END; $$
--- LANGUAGE plpgsql;
 
--- SELECT * FROM preceding_tasks();
+CREATE OR REPLACE FUNCTION preceding_tasks()
+	RETURNS TABLE (
+	"Task" VARCHAR(255),
+	"PrevCount" INT
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	SELECT title, count_preceding_tasks(title)
+	FROM tasks;
+END; $$
+LANGUAGE plpgsql;
 
+SELECT * FROM preceding_tasks();
 
 -------------------------------- 13 ---------------------------------
 
@@ -445,26 +456,36 @@ SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
 -- Output format: 
 		  -- list of days
 
-
--- CREATE OR REPLACE FUNCTION lucky_days(num INT)
--- 	RETURNS TABLE (
--- 	"Day" DATE,
--- 	)
--- AS $$
--- BEGIN
--- 	RETURN QUERY
+CREATE OR REPLACE FUNCTION lucky_days(num INT)
+	RETURNS TABLE (
+	"Day" DATE
+	)
+AS $$
+BEGIN
+	RETURN QUERY
+	WITH successful_checks AS (
+		SELECT checkingpeer, status, time, checks.date, xp.xpamount, tasks.maxxp
+		FROM p2p
+		JOIN checks ON checks.id = p2p.checkid
+		JOIN xp ON checks.id = xp.checkid
+		JOIN tasks ON tasks.title = checks.task
+		ORDER BY date, time
+	),
+	amount_of_checks AS (
+		SELECT date, COUNT(*) AS amount
+		FROM successful_checks
+		WHERE status = 'Success' AND xpamount >= 0.8 * maxxp
+		GROUP BY date
+	)
+	SELECT date
+	FROM amount_of_checks
+	WHERE amount >= num;
 	
--- END; $$
--- LANGUAGE plpgsql;
+END; $$
+LANGUAGE plpgsql;
 
--- SELECT * FROM lucky_days(3);
+SELECT * FROM lucky_days(2);
 						 
--- SELECT checkingpeer, status, time, checks.date
--- FROM p2p
--- JOIN checks ON checks.id = p2p.checkid
--- ORDER BY date, time, checkingpeer
-						 
-
 
 -- INSERT INTO Checks(Peer, Task, Date) 
 -- VALUES ('Zoomdeni', 'A2', '2023-08-01');	 
@@ -473,7 +494,6 @@ SELECT * FROM two_yes_third_not('C1', 'DO1', 'SQL1');
 -- VALUES (56, 'Zoomdeni', 'Start', '14:00');
 -- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
 -- VALUES (56, 'Zoomdeni', 'Success', '14:30');
-
 
 
 -------------------------------- 14 ---------------------------------
