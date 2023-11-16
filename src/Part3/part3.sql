@@ -580,7 +580,6 @@ BEGIN
 		GROUP BY peer
 	) AS all_visits
 	WHERE times >= M_times;
-
 END; $$
 LANGUAGE plpgsql;
 
@@ -601,4 +600,44 @@ SELECT * FROM left_campus(10, 1);
 		-- month, 
 		-- percentage of early entries
 
+CREATE OR REPLACE FUNCTION early_entries()
+	RETURNS TABLE (
+		"Month" TEXT,
+		"EarlyEntries" NUMERIC
+	)
+AS $$
+DECLARE
+BEGIN
+	RETURN QUERY
+	WITH birthmonths AS (
+		SELECT nickname, to_char(peers.birthday, 'Month') AS month
+		FROM peers
+	),
+	birthmonth_entries AS (
+		SELECT to_char(tt.date, 'Month') AS month, 
+			   EXTRACT(hour FROM tt.time) AS time,
+			   COUNT(*) AS num	
+		FROM timetracking AS tt
+		JOIN birthmonths AS bm ON bm.nickname = tt.peer
+		WHERE bm.month = to_char(tt.date, 'Month') AND status = 1
+		GROUP BY 1, 2
+	),
+	early_entries AS (
+		SELECT month, COUNT(*) AS num
+		FROM birthmonth_entries AS be
+		WHERE time < 12
+		GROUP BY 1
+	),
+	months AS (
+		SELECT to_char(DATE '2023-01-01' + 
+			  (interval '1' month * generate_series(0,11)), 'Month') AS month
+	)
+		
+	SELECT months.month, COALESCE(ROUND(ee.num::numeric / be.num::numeric * 100), 0) AS EarlyEntries
+	FROM early_entries AS ee
+	JOIN birthmonth_entries AS be ON ee.month = be.month
+	FULL JOIN months ON months.month = ee.month;
+END; $$
+LANGUAGE plpgsql;
 
+SELECT * FROM early_entries();
