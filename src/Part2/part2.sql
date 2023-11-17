@@ -16,7 +16,7 @@ as $$
             SELECT LASTVAL() INTO lastCheckID;
         else
             SELECT Checks.id INTO lastCheckID
-            FROM P2Pq
+            FROM p2p
             JOIN Checks ON Checks.id = P2P.CheckID
             WHERE Checks.peer = Checked
                 AND Checks.Task = TaskName
@@ -42,7 +42,7 @@ as $$
         if new.Status = 'Start' then
             UPDATE TransferredPoints trp
             SET PointsAmount = PointsAmount + 1
-            WHERE new.CheckingPeer = trp.checkingpeer
+            WHERE new.CheckingPeer = trp.checkingpeer;
         end if;
         return new;
     end;

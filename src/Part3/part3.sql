@@ -362,10 +362,6 @@ LANGUAGE plpgsql;
 
 SELECT * FROM check_on_birthday();
 
-
--- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Start', '14:25');
--- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Success', '14:28');
-
 -------------------------------- 11 ---------------------------------
 
 -- Determine all peers who did the given tasks 1 and 2, but did not do task 3
@@ -508,21 +504,6 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT lucky_days(2);
-						 
-
--- INSERT INTO Checks(Peer, Task, Date) 
--- VALUES ('Zoomdeni', 'A2', '2023-08-01');	 
-						 
--- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
--- VALUES (56, 'Zoomdeni', 'Start', '14:00');
--- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
--- VALUES (56, 'Zoomdeni', 'Success', '14:30');
-
--- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
--- VALUES (56, 'Zoomdeni', 'Success', '14:30');
-
-
--- INSERT INTO XP(CheckID, XPAmount) VALUES (56, 400);
 
 
 -------------------------------- 14 ---------------------------------
@@ -583,7 +564,7 @@ BEGIN
 END; $$
 LANGUAGE plpgsql;
 
-SELECT * FROM came_before('2022-09-09', 2);
+SELECT * FROM came_before('2023-12-12', 2);
 
 -------------------------------- 16 ---------------------------------
 
@@ -670,4 +651,3 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM early_entries();
-
