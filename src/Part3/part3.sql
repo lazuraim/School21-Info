@@ -456,35 +456,58 @@ SELECT * FROM preceding_tasks();
 -- Output format: 
 		  -- list of days
 
-CREATE OR REPLACE FUNCTION lucky_days(num INT)
+CREATE OR REPLACE FUNCTION lucky_days(N INT)
 	RETURNS TABLE (
 	"Day" DATE
 	)
-AS $$
+AS $$ 
+DECLARE
+	successful_checks INT = 0;
+	first_fail INT = 0;
+	   
+	last_counter    INT := 0;
+		
+	cur_date DATE;
+	current_check INT;
+	check_info RECORD;
 BEGIN
-	RETURN QUERY
-	WITH successful_checks AS (
-		SELECT checkingpeer, status, time, checks.date, xp.xpamount, tasks.maxxp
-		FROM p2p
-		JOIN checks ON checks.id = p2p.checkid
+	FOR cur_date IN (
+		SELECT DISTINCT date
+		FROM checks
 		JOIN xp ON checks.id = xp.checkid
-		JOIN tasks ON tasks.title = checks.task
-		ORDER BY date, time
-	),
-	amount_of_checks AS (
-		SELECT date, COUNT(*) AS amount
-		FROM successful_checks
-		WHERE status = 'Success' AND xpamount >= 0.8 * maxxp
-		GROUP BY date
+		JOIN tasks AS t ON t.title = checks.task
+		WHERE xp.xpamount >= 0.8 * t.maxxp
+		ORDER BY 1 
 	)
-	SELECT date
-	FROM amount_of_checks
-	WHERE amount >= num;
-	
+		LOOP
+			successful_checks = 0;
+			first_fail = 0;
+				FOR check_info IN (
+					SELECT checks.id, date, status, time
+					FROM checks
+					JOIN p2p ON p2p.checkid = checks.id
+					WHERE checks.date = cur_date AND p2p.status != 'Start'
+				)
+					LOOP
+						IF check_info.status = 'Success' THEN
+							successful_checks := successful_checks + 1;
+						ELSEIF check_info.status = 'Failure' THEN
+							first_fail := successful_checks + 1;
+							successful_checks := 0;
+						END IF;
+
+					END LOOP;
+			
+			IF successful_checks >= N OR first_fail > N THEN
+				RETURN QUERY
+				SELECT cur_date;
+			END IF;
+			
+	   END LOOP;
 END; $$
 LANGUAGE plpgsql;
 
-SELECT * FROM lucky_days(2);
+SELECT lucky_days(2);
 						 
 
 -- INSERT INTO Checks(Peer, Task, Date) 
@@ -494,6 +517,12 @@ SELECT * FROM lucky_days(2);
 -- VALUES (56, 'Zoomdeni', 'Start', '14:00');
 -- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
 -- VALUES (56, 'Zoomdeni', 'Success', '14:30');
+
+-- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
+-- VALUES (56, 'Zoomdeni', 'Success', '14:30');
+
+
+-- INSERT INTO XP(CheckID, XPAmount) VALUES (56, 400);
 
 
 -------------------------------- 14 ---------------------------------
@@ -641,3 +670,4 @@ END; $$
 LANGUAGE plpgsql;
 
 SELECT * FROM early_entries();
+
