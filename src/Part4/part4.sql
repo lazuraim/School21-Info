@@ -1,25 +1,25 @@
 -- 1)
+CREATE OR REPLACE PROCEDURE drop_tablename_tables(tables_name varchar)
+AS
+$$
+DECLARE
+    table_name varchar;
+BEGIN
+    FOR table_name IN (SELECT tablename
+                       FROM pg_tables
+                       WHERE schemaname = 'public'
+                         AND tablename LIKE concat(tables_name, '%'))
+        LOOP
+            EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(table_name) || ' CASCADE'; -- удаляем, quote_ident для нормальной вставки переменной в команду
+        END LOOP;
+END;
+$$
+    LANGUAGE plpgsql;
 
-create
-    or replace procedure prcdr_drop_tables_started_TableName() as
-$$
-declare
-    rec record;
-begin
-    for rec in
-        select tablename
-        from pg_catalog.pg_tables
-        where schemaname != 'pg_catalog'
-          and schemaname != 'information_schema'
-          and tablename ~* '^TableName'
-        loop
-            execute 'drop table ' || quote_ident(rec.tablename);
-            raise
-                info 'Dropped table: %', quote_ident(rec.tablename);
-        end loop;
-end;
-$$
-    language plpgsql;
+-- CREATE TABLE proverka();
+-- BEGIN;
+--  CALL drop_tablename_tables('t');
+-- END;
 
 -- 2)
 
@@ -56,69 +56,59 @@ $$
 
 -- 3)
 
-create or replace procedure prcdr_destroy_DML_triggers(num out int)
+CREATE OR REPLACE PROCEDURE drop_dml_triggers(out counter bigint)
 AS
 $$
-declare
-    i record;
-begin
-    num := 0;
-    for i in
-        select *
-        from information_schema.triggers
-        where event_manipulation in ('DELETE', 'UPDATE', 'INSERT')
-        loop
-            execute 'drop trigger ' || i.trigger_name || ' on '
-                        || i.event_object_table || ' cascade';
-            num := num + 1;
-        end loop;
-end;
+DECLARE
+    name_of_trigger varchar;
+    name_of_table   varchar;
+BEGIN
+    counter := 0;
+    RAISE NOTICE 'Удалённые триггеры:';
+    FOR name_of_trigger, name_of_table IN (SELECT tgname, pgc.relname
+                                           FROM pg_trigger -- таблица триггеров
+                                                    JOIN (SELECT oid, relname FROM pg_class) AS pgc -- таблица с названиями таблиц
+                                                         ON pg_trigger.tgrelid = pgc.oid
+                                           WHERE tgisinternal IS false)
+        LOOP
+            EXECUTE 'DROP TRIGGER IF EXISTS ' || quote_ident(name_of_trigger) || ' ON ' || quote_ident(name_of_table) ||
+                    ' CASCADE';
+            RAISE NOTICE '%', name_of_trigger::text;
+            counter := counter + 1;
+        END LOOP;
+    RAISE NOTICE 'Количество удалённых триггеров: %', counter::text;
+END;
 $$
-    language plpgsql;
+    LANGUAGE plpgsql;
+
+-- DO $$
+--     DECLARE
+--         count_result bigint;
+--     BEGIN
+--         CALL drop_dml_triggers(count_result);
+--     END;
+-- $$;
 
 -- 4)
 
-create
-    or replace procedure prcdr_find_objects_by_text(
-    sub in text,
-    list out text
-) as
+CREATE OR REPLACE PROCEDURE name_and_discript_of_objects(in substroke varchar, INOUT result_cursor refcursor)
+AS
 $$
-declare
-    i record;
-begin
-    list
-        := '';
-    for i in
-        select routine_name as name,
-               'procedure'  as object_type
-        from information_schema.routines
-        where routine_type = 'PROCEDURE'
-          and routine_name ~ sub
-        union all
-        select proname    as name,
-               'function' as object_type
-        from pg_catalog.pg_namespace n
-                 join pg_catalog.pg_proc p on p.pronamespace = n.oid
-        where p.prokind = 'f'
-          and n.nspname = 'public'
-          and proname ~ sub
-        loop
-            list := (list || i.name || ' [type -> '
-                         || i.object_type || ']' || E'\n');
-        end loop;
-end;
+BEGIN
+    OPEN result_cursor FOR
+        SELECT proname, pg_description.description
+        FROM pg_proc
+                 LEFT JOIN pg_description ON pg_proc.oid = pg_description.objoid
+        WHERE ((prorettype::varchar ~ '^[0-9]+$' AND
+                proargtypes::varchar ~ '^[0-9]+$' AND
+                prokind = 'f') OR prokind = 'p')
+          AND prosrc LIKE '%' || substroke || '%';
+END;
 $$
     language plpgsql;
 
-
-do
-$$
-    declare
-        result refcursor = 'dad';
-    begin
-        open result for call prcdr_funcs_with_arguments();
-    end
-$$;
-fetch all in "generated_result_cursor";
-close "generated_result_cursor";
+-- BEGIN;
+--     CALL name_and_discript_of_objects('SELECT', 'cursor');
+--     FETCH ALL FROM "cursor";
+--     CLOSE "cursor";
+-- END
