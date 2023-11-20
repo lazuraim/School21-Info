@@ -388,10 +388,6 @@ LANGUAGE plpgsql;
 SELECT *
 FROM check_on_birthday();
 
-
--- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Start', '14:25');
--- INSERT INTO Verter(CheckID, Status, Time) VALUES (57, 'Success', '14:28');
-
 -------------------------------- 11 ---------------------------------
 
 -- Determine all peers who did the given tasks 1 and 2, but did not do task 3
@@ -488,45 +484,61 @@ FROM preceding_tasks();
 -- Output format: 
 -- list of days
 
-CREATE
-OR REPLACE FUNCTION lucky_days(num INT)
+
+CREATE OR REPLACE FUNCTION lucky_days(N INT)
 	RETURNS TABLE (
 	"Day" DATE
 	)
-AS $$
+AS $$ 
+DECLARE
+	successful_checks INT = 0;
+	first_fail INT = 0;
+	   
+	last_counter    INT := 0;
+		
+	cur_date DATE;
+	current_check INT;
+	check_info RECORD;
 BEGIN
-RETURN QUERY WITH successful_checks AS (
-		SELECT checkingpeer, status, time, checks.date, xp.xpamount, tasks.maxxp
-		FROM p2p
-		JOIN checks ON checks.id = p2p.checkid
-		JOIN xp ON checks.id = xp.checkid
-		JOIN tasks ON tasks.title = checks.task
-		ORDER BY date, time
-	),
-	amount_of_checks AS (
-		SELECT date, COUNT(*) AS amount
-		FROM successful_checks
-		WHERE status = 'Success' AND xpamount >= 0.8 * maxxp
-		GROUP BY date
-	)
-SELECT date
-FROM amount_of_checks
-WHERE amount >= num;
 
+	FOR cur_date IN (
+		SELECT DISTINCT date
+		FROM checks
+		JOIN xp ON checks.id = xp.checkid
+		JOIN tasks AS t ON t.title = checks.task
+		WHERE xp.xpamount >= 0.8 * t.maxxp
+		ORDER BY 1 
+	)
+		LOOP
+			successful_checks = 0;
+			first_fail = 0;
+				FOR check_info IN (
+					SELECT checks.id, date, status, time
+					FROM checks
+					JOIN p2p ON p2p.checkid = checks.id
+					WHERE checks.date = cur_date AND p2p.status != 'Start'
+				)
+					LOOP
+						IF check_info.status = 'Success' THEN
+							successful_checks := successful_checks + 1;
+						ELSEIF check_info.status = 'Failure' THEN
+							first_fail := successful_checks + 1;
+							successful_checks := 0;
+						END IF;
+
+					END LOOP;
+			
+			IF successful_checks >= N OR first_fail > N THEN
+				RETURN QUERY
+				SELECT cur_date;
+			END IF;
+			
+	   END LOOP;
 END; $$
 LANGUAGE plpgsql;
 
-SELECT *
-FROM lucky_days(2);
+SELECT lucky_days(2);
 
-
--- INSERT INTO Checks(Peer, Task, Date) 
--- VALUES ('Zoomdeni', 'A2', '2023-08-01');	 
-
--- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
--- VALUES (56, 'Zoomdeni', 'Start', '14:00');
--- INSERT INTO P2P(CheckID, CheckingPeer, Status, Time) 
--- VALUES (56, 'Zoomdeni', 'Success', '14:30');
 
 
 -------------------------------- 14 ---------------------------------
@@ -589,8 +601,8 @@ WHERE times >= N;
 END; $$
 LANGUAGE plpgsql;
 
-SELECT *
-FROM came_before('2022-09-09', 2);
+
+SELECT * FROM came_before('2023-12-12', 2);
 
 -------------------------------- 16 ---------------------------------
 
@@ -608,16 +620,17 @@ OR REPLACE FUNCTION left_campus(num_of_days INT, M_times INT)
 	)
 AS $$
 BEGIN
-RETURN QUERY
-SELECT peer
-FROM (
-         SELECT peer, COUNT(*) AS times
-         FROM timetracking
-         WHERE date > (CURRENT_DATE - num_of_days) AND date < CURRENT_DATE AND status = 2
-         GROUP BY peer
-     ) AS all_visits
-WHERE times >= M_times;
 
+	RETURN QUERY
+	SELECT peer
+	FROM (
+		SELECT peer, COUNT(*) AS times
+		FROM timetracking
+		WHERE date > (CURRENT_DATE - num_of_days) AND date < CURRENT_DATE AND status = 2
+		GROUP BY peer
+	) AS all_visits
+	WHERE times >= M_times;
+>>>>>>> origin/scabberr
 END; $$
 LANGUAGE plpgsql;
 
@@ -636,5 +649,49 @@ FROM left_campus(10, 1);
 
 -- For each month, count the percentage of early entries to campus relative to the total number of entries.
 -- Output format: 
--- month,
--- percentage of early entries
+
+		-- month, 
+		-- percentage of early entries
+
+CREATE OR REPLACE FUNCTION early_entries()
+	RETURNS TABLE (
+		"Month" TEXT,
+		"EarlyEntries" NUMERIC
+	)
+AS $$
+DECLARE
+BEGIN
+	RETURN QUERY
+	WITH birthmonths AS (
+		SELECT nickname, to_char(peers.birthday, 'Month') AS month
+		FROM peers
+	),
+	birthmonth_entries AS (
+		SELECT to_char(tt.date, 'Month') AS month, 
+			   EXTRACT(hour FROM tt.time) AS time,
+			   COUNT(*) AS num	
+		FROM timetracking AS tt
+		JOIN birthmonths AS bm ON bm.nickname = tt.peer
+		WHERE bm.month = to_char(tt.date, 'Month') AND status = 1
+		GROUP BY 1, 2
+	),
+	early_entries AS (
+		SELECT month, COUNT(*) AS num
+		FROM birthmonth_entries AS be
+		WHERE time < 12
+		GROUP BY 1
+	),
+	months AS (
+		SELECT to_char(DATE '2023-01-01' + 
+			  (interval '1' month * generate_series(0,11)), 'Month') AS month
+	)
+		
+	SELECT months.month, COALESCE(ROUND(ee.num::numeric / be.num::numeric * 100), 0) AS EarlyEntries
+	FROM early_entries AS ee
+	JOIN birthmonth_entries AS be ON ee.month = be.month
+	FULL JOIN months ON months.month = ee.month;
+END; $$
+LANGUAGE plpgsql;
+
+SELECT * FROM early_entries();
+

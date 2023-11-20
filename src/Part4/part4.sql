@@ -10,7 +10,7 @@ BEGIN
                        WHERE schemaname = 'public'
                          AND tablename LIKE concat(tables_name, '%'))
         LOOP
-            EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(table_name) || ' CASCADE'; -- удаляем, quote_ident для нормальной вставки переменной в команду
+            EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(table_name) || ' CASCADE';
         END LOOP;
 END;
 $$
@@ -23,36 +23,44 @@ $$
 
 -- 2)
 
-create
-    or replace procedure prcdr_funcs_with_arguments(
-    func out text,
-    numb out int
-) as
+CREATE OR REPLACE PROCEDURE count_of_scal_functions(out counter bigint)
+AS
 $$
-declare
-    line record;
-begin
-    func
-        := '';
-    numb
-        := 0;
-    for line in
-        select (
-                   p.proname || ' (' || pg_get_function_arguments(p.oid) || ')'
-                   ) as functions_list
-        from pg_catalog.pg_namespace n
-                 join pg_catalog.pg_proc p on p.pronamespace = n.oid
-        where p.prokind = 'f'
-          and n.nspname = 'public'
-          and (pg_get_function_arguments(p.oid) = '') is not true
-        loop
-            func := (func || line.functions_list || E'\n');
-            numb
-                := numb + 1;
-        end loop;
-end;
+DECLARE
+    result_text text;
+BEGIN
+    CREATE TEMPORARY TABLE functions AS (
+        SELECT concat(proname, ' | ', tn.typname) as output
+        FROM pg_proc
+                 JOIN (SELECT oid
+                       FROM pg_roles
+                       WHERE rolsuper IS true
+                         AND rolcanlogin IS true
+                         AND rolreplication IS false
+                         AND rolbypassrls IS false) AS role
+                      ON role.oid = pg_proc.proowner
+                 JOIN (SELECT typname, oid FROM pg_type) AS tn ON tn.oid = pg_proc.prorettype
+        WHERE prorettype::varchar ~ '^[0-9]+$'
+          AND tn.typname NOT LIKE 'void'
+          AND proargtypes::varchar ~ '^[0-9]+$'
+    );
+    SELECT COUNT(functions.output) INTO counter FROM functions;
+
+    SELECT array_to_string(array_agg(output), E'\n') INTO result_text FROM functions;
+    RAISE NOTICE 'Функции: %', result_text::text;
+END
 $$
-    language plpgsql;
+    LANGUAGE plpgsql;
+
+-- DO $$
+--     DECLARE
+--         count_result bigint;
+--     BEGIN
+--         CALL count_of_scal_functions(count_result);
+--         RAISE NOTICE 'Результат процедуры: %', count_result;
+--     END;
+-- $$;
+
 
 -- 3)
 
